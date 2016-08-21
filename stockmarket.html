@@ -1,0 +1,1482 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+<meta charset="utf-8">
+<title>Stock Market Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+  <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+
+
+
+
+      <style type="text/css">
+             #historical{
+              overflow-x: scroll;
+          }
+
+          .nav-pills > .active > a, .nav-tabs > .active > a:hover {
+            outline:none;
+            }
+          .pad {
+   padding-left: 10px;
+    padding-right: 10px;
+  }
+        
+          .star{
+              color: red;
+          }
+    
+              body{
+                  background-color: rgb(29,84,116);
+                  font-size: 11.5px;
+                  margin-left: 10%;
+                  margin-top: 10px;
+              }
+          
+        tr:nth-child(even) {background: #FFF}
+          tr:nth-child(odd) {background: rgb(245,245,245)}  
+      </style>
+      
+      <script type="text/javascript">
+           
+        $(document).ready(
+        function()
+        {
+             $("#right").prop('disabled', true);
+             globe="";
+            fav();
+            var optionSelected = false;
+            $("#symbol").keyup(function(e){
+               if(e.which==8 && this.value.length==0)
+                {
+                    $("#symbol").keypress(function(e){
+                        if(e.which!=8){
+                        if($("#blah").length>0)
+                        {
+                            $("div").remove("#blah"); 
+                        }
+                    } }
+                                          );}
+                
+            });
+            
+            $("#clear").on('click', function(){
+                
+                window.location.replace("http://cs-server.usc.edu:31883/stockmarket.html");
+                
+            });
+        
+            
+                $('#autorefresh').change(function(){
+                    if($(this).prop('checked')){
+                    interval=setInterval(function() {
+                    if(window.localStorage.length>0)
+                    {
+                        r=1;
+                    for(var i=localStorage.length-1;i>=0;i--)
+                    {
+                    var sum=localStorage.getItem(localStorage.key(i));
+                    $.ajax({
+                            url: "something.php",
+                            data: ({input:sum}),
+                            async: false,
+                            type: 'GET',
+                            success: function(obj){
+                                var json=$.parseJSON(obj);
+                                var temprows=document.getElementById('favtable').rows;
+                               for(var j=1;j<=localStorage.length;j++){
+                                var tabledata=temprows[j].cells;
+                                    
+                                if((tabledata[0].innerHTML.split('>')[1].split('<')[0])==sum)
+                                {
+                                tabledata[2].innerHTML='$ '+(json.LastPrice).toFixed(2);
+                            if((json.Change).toFixed(2) <0 || (json.ChangePercent).toFixed(2) < 0){
+                            tabledata[3].innerHTML="<span style='color:red;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'></span>";
+                            }
+                            else
+                            {
+                            tabledata[3].innerHTML="<span style='color:green;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'></span>";    
+                            }}
+                               }
+                            },
+                            
+                            error: function(){
+                                alert("failure");
+                            }
+            
+                    });
+                }      
+        }
+                    }, 5000);
+                }
+                else
+                {
+
+                    clearInterval(interval);
+                }
+        });
+ 
+                 $('#left').on('click',function(){
+        
+                                $("#myCarousel").carousel();
+                                $("#quote").attr('disabled', false);
+                                $("#myCarousel").carousel("next");
+                        });
+                
+            $('#symbol').autocomplete({
+                    select: function (e, ui) {
+                         optionSelected = true;
+                        $("#symbol").val(ui.item.x);
+                        if($("#blah").length>0)
+                        {
+                            $("div").remove("#blah"); 
+                        }
+        
+                        return false;
+                    },
+                    source: function(request, response){
+                        $.ajax({
+                            url: "something.php",
+                            dataType: "json",
+                            data: {symbol: request.term},
+                            success: function(data) {
+
+                        response($.map(data,function(value,key){
+                            
+                            return{
+                                x: data[key].Symbol,
+                                value: data[key].Symbol+" - "+data[key].Name+" ( "+data[key].Exchange+" )"
+                            };
+                                                        
+                           
+                        }));
+                            },
+                        error: function(){
+                                               
+                    }
+                        });
+                    }
+            });
+             
+             $("#right").on("click",function(e){
+                 $("#quote").prop('disabled', true);
+                 if(globe=="")
+                {
+                    e.preventDefault();
+                }
+                 else
+                {
+                    $("#myCarousel").carousel();
+                    $("#myCarousel").carousel("next");
+                    var sym=$('#symbol').val();
+                    $.ajax({
+                        url: "something.php",
+                        data: ({input:sym}),
+                        type: 'GET',
+                        success: function(data){
+                            var json = $.parseJSON(data);
+                            stockchart(json);
+                            id=1;
+                            var h=0;
+                            for(var k=0; k<localStorage.length; k++) {
+                                var key = localStorage.key(k);
+                                var value = localStorage[key];
+                                if(value==sym){
+                                   h=1;
+                                   
+                                   if(document.getElementById("delstar"))
+                                    {   document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                    }
+                                    else
+                                    {
+                                        document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                        document.getElementById("favstar").setAttribute("id", "delstar");
+                                    }
+                                }                
+                            }
+                            if(h==0)
+                            {
+                               if(document.getElementById("favstar"))
+                               { document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                               }
+                                
+                                else if(document.getElementById("delstar"))
+                                {
+                                    document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                                    document.getElementById("delstar").setAttribute("id", "favstar");
+                                }
+                            }
+                   
+                        
+                        
+                            console.log("Should enter news now");
+                $.ajax({
+                    beforeSend:function(){
+                        console.log("HEyyy");
+                        $("#news").text("Loading news...");
+                    },
+                    url: "something.php",
+                    data: ({new:sym}),
+                    type: 'GET',
+                    success: function(object){
+                    console.log("Hello");
+                    var jnews = $.parseJSON(object);
+                    console.log(jnews);
+                    var x=jnews.responseData.results;
+                    var str="";
+                    for( var i=0; i<x.length; i++)
+                        {
+                            var date = new Date(x[i].publishedDate);
+
+                            var months = Array("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December");
+                            var dd;
+                            if(date.getDate()<10)
+                            {
+                                dd="0"+date.getDate();
+                            }
+                            else
+                            {
+                                dd=date.getDate();
+                            }
+                            var string = dd + " " + months[date.getMonth()] + " " + date.getFullYear()+" ";
+                            var hh,mm,ss;
+                            if(date.getHours()<10)
+                            {
+                                hh="0"+date.getHours();
+                            }
+                            else
+                            {
+                                hh=date.getHours();
+                            }
+                            if(date.getMinutes()<10)
+                            {
+                                mm="0"+date.getMinutes();
+                            }
+                            else
+                            {
+                                mm=date.getMinutes();
+                            }
+                            if(date.getSeconds()<10)
+                            {
+                                ss="0"+date.getSeconds();
+                            }
+                            else
+                            {
+                                ss=date.getSeconds();
+                            }
+                            var time =hh+":"+mm+":"+ss;
+                            string+=time;
+                            str+="<div class='well' style='margin-top:25px'>";
+                            str+="<a href='"+x[i].unescapedUrl+"'>"+x[i].titleNoFormatting+"</a><p>"+x[i].content+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Publisher: </span>"+x[i].publisher+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Date: </span>"+string+"</p></div>";
+                        }
+                    $('#news').html(str);
+                    },
+                    error: function(){
+                            alert("failure");
+                        }
+                });
+                            
+
+                        
+                            
+            
+        
+
+    //Make JSON request for timeseries data
+    $.ajax({
+        beforeSend:function(){
+            console.log("HBHBH");
+            $("#historical").text("Loading chart...");
+        },
+        url: "something.php",
+        data: {xyz : sym},
+        dataType: "json",
+        success: function(jsonl){
+           
+    console.log("GGGG");
+    var dates = jsonl.Dates || [];
+    var elements = jsonl.Elements || [];
+    var chartSeries = [];
+
+    if (elements[0]){
+
+        for (var i = 0, datLen = dates.length; i < datLen; i++) {
+            var dati = new Date(dates[i]);
+            var dat=Date.UTC(dati.getFullYear(), dati.getMonth(), dati.getDate());
+            var pointData = [
+                dat,
+                elements[0].DataSeries['open'].values[i],
+                elements[0].DataSeries['high'].values[i],
+                elements[0].DataSeries['low'].values[i],
+                elements[0].DataSeries['close'].values[i]
+            ];
+            chartSeries.push( pointData );
+        };
+    }
+    var ohlc=chartSeries;
+    // set the allowed units for data grouping
+    var groupingUnits = [[
+        'week',                         // unit name
+        [1]                             // allowed multiples
+    ], [
+        'month',
+        [1, 2, 3, 4, 6]
+    ]];
+
+    // create the chart
+    $('#historical').highcharts('StockChart', {
+        chart: {
+          width: $(".panel-body").width()  
+        },
+        exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+    
+            events: {
+            	load: function(event) {
+                event.target.reflow();
+              }
+            },
+        rangeSelector: {
+                buttons: [{
+				            type: 'week',
+                            count: 1,
+                            text: '1w'
+                          }, {
+                            type: 'month',
+                            count: 3,
+                            text: '3m'
+                          }, {
+                            type: 'month',
+                            count: 6,
+                            text: '6m'
+                          }, {
+                            type: 'ytd',
+                            text: 'YTD'
+                          }, {
+                            type: 'year',
+                            count: 1,
+                            text: '1y'
+                          }],
+            selected: 0
+        }, 
+        
+        title: {
+            text: sym + ' Stock Value'
+        },
+
+        yAxis: [{
+            title: {
+                text: 'Stock Value'
+            },
+            exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+            height: 200,
+            lineWidth: 2
+        }],
+        
+        series: [{
+            type: 'area',
+            name: sym,
+            data: ohlc,
+            dataGrouping: {
+                units: groupingUnits
+            },
+            tooltip : {
+            valuePrefix: "$ "
+            },
+            fillColor : {
+                    linearGradient : {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops : [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                }
+            
+         
+        }],
+        credits: {
+            enabled:true
+        }
+    });
+        $(".highcharts-input-group").remove();
+        $("#historical").css("width","100%");
+        $(".highcharts-background").css("width","100%");
+        },
+        error: function(response,txtStatus){
+            console.log(response,txtStatus)
+        }
+    });
+
+            },
+            error: function(){
+                alert("failure");
+            }
+    });
+                    
+                }
+             });
+            
+            
+            $("#ref").on("click",function(e){
+                    if(window.localStorage.length>0)
+                    {
+                    for(var i=localStorage.length-1;i>=0;i--)
+                    {
+                    var sum=localStorage.getItem(localStorage.key(i));
+                    r=1
+                    $.ajax({
+                            url: "something.php",
+                            data: ({input:sum}),
+                            async: false,
+                            type: 'GET',
+                            success: function(obj){
+                                var json=$.parseJSON(obj);
+                                var temprows=document.getElementById('favtable').rows;
+                               for(var j=1;j<=localStorage.length;j++){
+                                var tabledata=temprows[j].cells;
+                                    console.log(tabledata[0]);
+                                if((tabledata[0].innerHTML.split('>')[1].split('<')[0])==sum)
+                                {
+                                tabledata[2].innerHTML='$ '+(json.LastPrice).toFixed(2);
+                            if((json.Change).toFixed(2) <0 || (json.ChangePercent).toFixed(2) < 0){
+                            tabledata[3].innerHTML="<span style='color:red;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'></span>";
+                            }
+                            else
+                            {
+                            tabledata[3].innerHTML="<span style='color:green;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'></span>";    
+                
+                            }
+                                }
+                               }
+                            },
+                            error: function(){
+                                alert("failure");
+                            }
+            
+                    });
+                }      
+        }
+        });
+        $("#quote").on("click",function(e){
+                if(optionSelected && $('#symbol').val().length>0 && $("#quote").attr('disabled')!='disabled')
+                {
+               
+                    var sym=$('#symbol').val();
+                    globe=sym;
+                    $.ajax({
+                        url: "something.php",
+                        data: ({input:sym}),
+                        type: 'GET',
+                        success: function(data){
+                            $("#myCarousel").carousel();
+                            $("#quote").attr('disabled', true);
+                            $("#myCarousel").carousel("next");
+                            var json = $.parseJSON(data);
+                            stockchart(json);
+                            var h=0;
+                            for(var k=0; k<localStorage.length; k++) {
+                                var key = localStorage.key(k);
+                                var value = localStorage[key];
+                                if(value==sym){
+                                   h=1;
+                                   
+                                   if(document.getElementById("delstar"))
+                                    {   document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                    }
+                                    else
+                                    {
+                                        document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                        document.getElementById("favstar").setAttribute("id", "delstar");
+                                    }
+                                }                
+                            }
+                            if(h==0)
+                            {
+                               if(document.getElementById("favstar"))
+                               { document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                               }
+                                
+                                else if(document.getElementById("delstar"))
+                                {
+                                    document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                                    document.getElementById("delstar").setAttribute("id", "favstar");
+                                }
+                            }
+                       
+                       
+                            console.log("Should enter news now");
+                $.ajax({
+                    beforeSend:function(){
+                        console.log("HEyyy");
+                        $("#news").text("Loading news...");
+                    },
+                    url: "something.php",
+                    data: ({new:sym}),
+                    type: 'GET',
+                    success: function(object){
+                    console.log("Hello");
+                    var jnews = $.parseJSON(object);
+                    console.log(jnews);
+                    var x=jnews.responseData.results;
+                    var str="";
+                    for( var i=0; i<x.length; i++)
+                        {
+                            var date = new Date(x[i].publishedDate);
+
+                            var months = Array("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December");
+                            var dd;
+                            if(date.getDate()<10)
+                            {
+                                dd="0"+date.getDate();
+                            }
+                            else
+                            {
+                                dd=date.getDate();
+                            }
+                            var string = dd + " " + months[date.getMonth()] + " " + date.getFullYear()+" ";
+                            var hh,mm,ss;
+                            if(date.getHours()<10)
+                            {
+                                hh="0"+date.getHours();
+                            }
+                            else
+                            {
+                                hh=date.getHours();
+                            }
+                            if(date.getMinutes()<10)
+                            {
+                                mm="0"+date.getMinutes();
+                            }
+                            else
+                            {
+                                mm=date.getMinutes();
+                            }
+                            if(date.getSeconds()<10)
+                            {
+                                ss="0"+date.getSeconds();
+                            }
+                            else
+                            {
+                                ss=date.getSeconds();
+                            }
+                            var time =hh+":"+mm+":"+ss;
+                            string+=time;
+                            str+="<div class='well' style='margin-top:25px'>";
+                            str+="<a href='"+x[i].unescapedUrl+"'>"+x[i].titleNoFormatting+"</a><p>"+x[i].content+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Publisher: </span>"+x[i].publisher+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Date: </span>"+string+"</p></div>";
+                        }
+                    $('#news').html(str);
+                    },
+                    error: function(){
+                            alert("failure");
+                        }
+                });
+                            
+
+                        
+                            
+            
+        
+
+    //Make JSON request for timeseries data
+    $.ajax({
+        beforeSend:function(){
+            console.log("HBHBH");
+            $("#historical").text("Loading chart...");
+        },
+        url: "something.php",
+        data: {xyz : sym},
+        dataType: "json",
+        success: function(jsonl){
+           
+    console.log("GGGG");
+    var dates = jsonl.Dates || [];
+    var elements = jsonl.Elements || [];
+    var chartSeries = [];
+
+    if (elements[0]){
+
+        for (var i = 0, datLen = dates.length; i < datLen; i++) {
+            var dati = new Date(dates[i]);
+            var dat=Date.UTC(dati.getFullYear(), dati.getMonth(), dati.getDate());
+            var pointData = [
+                dat,
+                elements[0].DataSeries['open'].values[i],
+                elements[0].DataSeries['high'].values[i],
+                elements[0].DataSeries['low'].values[i],
+                elements[0].DataSeries['close'].values[i]
+            ];
+            chartSeries.push( pointData );
+        };
+    }
+    var ohlc=chartSeries;
+    // set the allowed units for data grouping
+    var groupingUnits = [[
+        'week',                         // unit name
+        [1]                             // allowed multiples
+    ], [
+        'month',
+        [1, 2, 3, 4, 6]
+    ]];
+
+    // create the chart
+    $('#historical').highcharts('StockChart', {
+        chart: {
+          width: $(".panel-body").width()  
+        },
+        exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+    
+            events: {
+            	load: function(event) {
+                event.target.reflow();
+              }
+            },
+        rangeSelector: {
+                buttons: [{
+				            type: 'week',
+                            count: 1,
+                            text: '1w'
+                          }, {
+                            type: 'month',
+                            count: 3,
+                            text: '3m'
+                          }, {
+                            type: 'month',
+                            count: 6,
+                            text: '6m'
+                          }, {
+                            type: 'ytd',
+                            text: 'YTD'
+                          }, {
+                            type: 'year',
+                            count: 1,
+                            text: '1y'
+                          }],
+            selected: 0
+        }, 
+        
+        title: {
+            text: sym + ' Stock Value'
+        },
+
+        yAxis: [{
+            title: {
+                text: 'Stock Value'
+            },
+            exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+            height: 200,
+            lineWidth: 2
+        }],
+        
+        series: [{
+            type: 'area',
+            name: sym,
+            data: ohlc,
+            dataGrouping: {
+                units: groupingUnits
+            },
+            tooltip : {
+            valuePrefix: "$ "
+            },
+            fillColor : {
+                    linearGradient : {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops : [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                }
+            
+         
+        }],
+        credits: {
+            enabled:true
+        }
+    });
+        $(".highcharts-input-group").remove();
+        $("#historical").css("width","100%");
+        $(".highcharts-background").css("width","100%");
+        },
+        error: function(response,txtStatus){
+            console.log(response,txtStatus)
+        }
+    });
+
+            },
+            error: function(){
+                 if($("#blah").length==0 && $("#quote").attr('disabled')!='disabled')
+                                {
+                                 $(".inner").append("<div id='blah' style='color:red;'><br>Enter valid entry.</div>");
+                                }
+                                  e.preventDefault();
+                
+            }
+    });
+
+    }
+                         else
+                             {
+
+                                 if($("#blah").length==0 && $("#quote").attr('disabled')!='disabled')
+                                {
+                                 $(".inner").append("<div id='blah' style='color:red;'><br>Enter valid entry.</div>");
+                                }
+                                  e.preventDefault();
+
+                             }
+
+
+                });
+
+
+                });
+function stockchart(json)
+{                            
+    $('#1').html(json.Name);
+                            $('#2').html(json.Symbol);
+                            $('#3').html("$ "+(json.LastPrice).toFixed(2));
+                           if((json.Change).toFixed(2)>0 && (json.ChangePercent).toFixed(2)>0)
+                           { $('#4').html("<span style='color: green;'>"+((json.Change).toFixed(2))+" ( "+(json.ChangePercent).toFixed(2)+"% ) </span>"+"<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'>");
+                           }
+                        else if(((json.Change).toFixed(2))<0 || ((json.ChangePercent).toFixed(2))<0)
+                           { $('#4').html("<span style='color: red;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% ) </span>"+"<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'>");
+                           }
+                            else
+                            {
+                             $('#4').html((json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% ) ");   
+                            }
+                        var month = new Array();
+                        month[0] = "January";
+                        month[1] = "February";
+                        month[2] = "March";
+                        month[3] = "April";
+                        month[4] = "May";
+                        month[5] = "June";
+                        month[6] = "July";
+                        month[7] = "August";
+                        month[8] = "September";
+                        month[9] = "October";
+                        month[10] = "November";
+                        month[11] = "December";
+                        var d = new Date(json.Timestamp);
+                        var date=(d.getDate() < 10) ? "0" + d.getDate() : d.getDate();
+                        var formattedDate = date + " " + (month[d.getMonth()]) + " " + d.getFullYear()+",";
+                        var hours = (d.getHours() < 10) ? "0" + d.getHours() : d.getHours();
+                        var minutes = (d.getMinutes() < 10) ? "0" + d.getMinutes() : d.getMinutes();
+                        var seconds=(d.getSeconds() < 10) ? "0" + d.getSeconds() : d.getMinutes();
+                        var meridiem = d.getHours() >= 12 ? " pm" : " am";
+                        var formattedTime = " "+hours + ":" + minutes+":"+seconds+meridiem;
+                        formattedDate=formattedDate+formattedTime;
+                        $('#5').html(formattedDate);
+                        if(json.MarketCap>=1000000000)
+                        {
+                            var temp=(json.MarketCap)/1000000000;
+                            $('#6').html(temp.toFixed(2)+" Billion");
+                        }
+                        else if(json.MarketCap>=1000000)
+                        {
+                            var temp=(json.MarketCap)/1000000;
+                            $('#6').html(temp.toFixed(2)+" Million");
+                        }
+                        else
+                        {
+                            $('#6').html(json.MarketCap);   
+                        }
+                        $('#7').html(json.Volume)
+                        if(((json.ChangePercentYTD).toFixed(2))>0 && ((json.ChangeYTD).toFixed(2))>0)
+                           { $('#8').html("<span style='color: green;'>"+(json.ChangeYTD).toFixed(2)+" ( "+(json.ChangePercentYTD).toFixed(2)+"% ) </span>"+"<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'>");
+                           }
+                        else if(((json.ChangePercentYTD).toFixed(2))<0 || ((json.ChangeYTD).toFixed(2))<0)
+                           { $('#8').html("<span style='color: red;'>"+(json.ChangeYTD).toFixed(2)+" ( "+(json.ChangePercentYTD).toFixed(2)+"% ) </span>"+"<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'>");
+                           }
+                            else
+                            {
+                             $('#8').html((json.ChangeYTD).toFixed(2)+" ( "+(json.ChangePercentYTD).toFixed(2)+"% ) ");   
+                            }
+                        $('#9').html("$ "+(json.High).toFixed(2));
+                        $('#10').html("$ "+(json.Low).toFixed(2));
+                        $('#11').html("$ "+(json.Open).toFixed(2)); 
+                        $('#lol').html("<img class='text-right' src='http://chart.finance.yahoo.com/t?s="+json.Symbol+"&lang=en-US&width=500&height=500' style='width:100%;height:100%;'>");
+name=json.Name;
+sym=json.Symbol;
+sam=json.Symbol;
+lastprice=(json.LastPrice).toFixed(2);
+change=(json.Change).toFixed(2);
+changepercent=(json.ChangePercent).toFixed(2);
+}
+ function share() {
+            FB.getLoginStatus(function (response) {
+                if (response.status === 'connected') {
+                    console.log("Hello");
+                                        FB.ui({
+                    method: 'feed',
+                    name: 'Current Stock Price of ' +name + ' is $' + lastprice,
+                    caption: 'Stock information of '+name +' ('+sym+')',
+                    picture:'http://chart.finance.yahoo.com/t?s='+sym+'&lang=en-US&width=600&height=500',
+                    description: 'LAST TRADE PRICE: $ '+lastprice+'. '+'CHANGE:'+change+'('+changepercent+'%)',
+                    display: 'popup'
+                },function (response){
+                    if (response && !response.error_message) {
+                            alert('Posted Successfully');
+                        } else {
+                            alert('Not Posted');
+                        }
+                }); 
+                } else {
+                    FB.login(function (response) {
+                        if (response.status === 'connected') {
+                                                FB.ui({
+                    method: 'feed',
+                    name: 'Current Stock Price of ' +name + ' is $' + lastprice,
+                    caption: 'Stock information of '+name +' ('+sym+')',
+                    picture:'http://chart.finance.yahoo.com/t?s='+sym+'&lang=en-US&width=600&height=500',
+                    description: 'LAST TRADE PRICE: $ '+lastprice+'. '+'CHANGE:'+change+'('+changepercent+'%)',
+                    display: 'popup'
+                },function (response){
+                    if (response && !response.error_message) {
+                            alert('Posted Successfully');
+                        } else {
+                            alert('Not Posted');
+                        }
+                }); 
+                        } else {
+                            alert('Not Posted');
+                        }
+                    });
+                }
+            });
+        }
+
+function localfavdel(x)
+    {
+        var rowno;
+        var delx;
+       for(var i=1;i<document.getElementById('favtable').rows.length;i++)
+        {           
+            var place=String(document.getElementById('favtable').rows[i].cells[0].innerHTML);
+         var place1=place.split(">")[1].split("<")[0];
+         if(place1==x)
+        {
+            delx=place1;
+            rowno=i;
+            break;
+        }
+        }
+        var temp=delx;
+        for(var i=0; i<localStorage.length; i++) {
+            var key = localStorage.key(i);
+            var value = localStorage[key];
+            if(value==temp){
+                document.getElementById('favtable').deleteRow(rowno);
+                localStorage.removeItem(key);
+            }                
+        }
+    }
+
+function delfav(x)
+    {
+        var rowno;
+        var delx;
+       for(var i=1;i<document.getElementById('favtable').rows.length;i++)
+        {           
+            var place=String(document.getElementById('favtable').rows[i].cells[0].innerHTML);
+         var place1=place.split(">")[1].split("<")[0];
+         if(place1==x)
+        {
+            document.getElementById('favtable').deleteRow(i);
+            delx=place1;
+            rowno=i;
+            for(var j=0; j<localStorage.length; j++) {
+            var key = localStorage.key(j);
+            var value = localStorage[key];
+            delx=delx.toLowerCase();
+            value=value.toLowerCase();
+            if(value==delx){
+                localStorage.removeItem(key);
+            }                
+            }
+            break;
+        }
+        }
+
+    }
+function fav()
+    {
+        
+        if(localStorage.length>0)
+        {
+            for(var i=localStorage.length-1;i>=0;i--)
+                {
+                    var x=localStorage.getItem(localStorage.key(i));
+                    $.ajax({
+                            url: "something.php",
+                            data: ({input:x}),
+                            type: 'GET',
+                            success: function(obj){
+                                var json=$.parseJSON(obj);
+                
+                            var market=json.MarketCap;
+                            var mcap="";
+                            if(json.MarketCap>=1000000000)
+                        {
+                            var temp=(json.MarketCap)/1000000000;
+                            mcap=(temp.toFixed(2)+" Billion");
+                        }
+                        else if(json.MarketCap>=1000000)
+                        {
+                            var temp=(json.MarketCap)/1000000;
+                            mcap=(temp.toFixed(2)+" Million");
+                        }
+                            var favtable = document.getElementById("favtable");
+                            var row = favtable.insertRow();
+                            cell1 = row.insertCell(0);
+                            var cell2 = row.insertCell(1); 
+                            var cell3 = row.insertCell(2);
+                            var cell4 = row.insertCell(3);
+                            var cell5 = row.insertCell(4);
+                            var cell6 = row.insertCell(5);
+                           var st1="<a href='javascript: link(";
+                            st1+="&#39;"+json.Symbol+"&#39;";
+                            st1+=")'>"+json.Symbol+"</a>";
+                            cell1.innerHTML=st1;
+                            cell2.innerHTML=json.Name;
+                            cell3.innerHTML='$ '+(json.LastPrice).toFixed(2);
+                            if((json.Change).toFixed(2) <0 || (json.ChangePercent).toFixed(2) < 0){
+                            cell4.innerHTML="<span style='color:red;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'></span>";
+                            }
+                            else
+                            {
+                            cell4.innerHTML="<span style='color:green;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'></span>";    
+                            }
+                            cell5.innerHTML=mcap;
+                            var st2="<button onclick='javascript: delfav(";
+                            st2+="&#39;"+json.Symbol+"&#39;";
+                            st2+=")'><span class='glyphicon glyphicon-trash'></span></button>";
+                            cell6.innerHTML=st2;
+                            
+                            },
+                            error: function(){
+                                alert("failure");
+                            }
+            
+                    })
+                }      
+        }        
+    }
+    function butt(){
+                        var sym=globe;
+                    
+                            if(document.getElementById('favstar')){
+                        document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                            document.getElementById("favstar").setAttribute("id", "delstar");
+                           
+                               
+                            
+                                id=localStorage.length+1;
+                                localStorage.setItem(id,sym);
+                            
+                            
+                            $.ajax({
+                                url: "something.php",
+                                data: ({input:sym}),
+                                type: 'GET',
+                                success: function(obj){
+                                    var json=$.parseJSON(obj);
+                                    var market=json.MarketCap;
+                                var mcap="";
+                                if(json.MarketCap>=1000000000)
+                                {
+                                    var temp=(json.MarketCap)/1000000000;
+                                    mcap=(temp.toFixed(2)+" Billion");
+                                }
+                                else if(json.MarketCap>=1000000)
+                                {
+                                    var temp=(json.MarketCap)/1000000;
+                                    mcap=(temp.toFixed(2)+" Million");
+                                }
+                            var favtable = document.getElementById("favtable");
+                            var row = favtable.insertRow();
+                            cell1 = row.insertCell(0);
+                            var cell2 = row.insertCell(1); 
+                            var cell3 = row.insertCell(2);
+                            var cell4 = row.insertCell(3);
+                            var cell5 = row.insertCell(4);
+                            var cell6 = row.insertCell(5);
+                            var st1="<a href='javascript: link(";
+                            st1+="&#39;"+json.Symbol+"&#39;";
+                            st1+=")'>"+json.Symbol+"</a>";
+                            cell1.innerHTML=st1;
+                            cell2.innerHTML=json.Name;
+                            cell3.innerHTML='$ '+(json.LastPrice).toFixed(2);
+                            if((json.Change).toFixed(2) <0 || (json.ChangePercent).toFixed(2) < 0){
+                            cell4.innerHTML="<span style='color:red;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/down.png'></span>";
+                            }
+                            else
+                            {
+                            cell4.innerHTML="<span style='color:green;'>"+(json.Change).toFixed(2)+" ( "+(json.ChangePercent).toFixed(2)+"% )<img src='http://cs-server.usc.edu:45678/hw/hw8/images/up.png'></span>";    
+                            }
+                            cell5.innerHTML=mcap;
+                            var st2="<button onclick='javascript: delfav(";
+                            st2+="&#39;"+json.Symbol+"&#39;";
+                            st2+=")'><span class='glyphicon glyphicon-trash'></span></button>";
+                            cell6.innerHTML=st2;
+                            
+                           
+                            
+                            },
+                                 error: function(){
+                                    alert("failure");
+                                }
+
+                            });}
+                            else
+                            {
+                                    document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                                document.getElementById("delstar").setAttribute("id", "favstar");
+                            
+                                localfavdel(sym);
+                            }
+                            
+                
+    }
+    function link(x)
+    {
+                    
+                    globe=x;
+                    $("#myCarousel").carousel();
+                    $("#myCarousel").carousel("next");
+                    $("#quote").attr('disabled',true);
+                    var sym=x;
+                    $.ajax({
+                        url: "something.php/",
+                        data: ({input:sym}),
+                        type: 'GET',
+                        success: function(data){
+                            var json = $.parseJSON(data);
+                            stockchart(json);
+                            id=1;
+                            var h=0;
+                            for(var k=0; k<localStorage.length; k++) {
+                                var key = localStorage.key(k);
+                                var value = localStorage[key];
+                                if(value==sym){
+                                   h=1;
+                                   
+                                   if(document.getElementById("delstar"))
+                                    {   document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                    }
+                                    else
+                                    {
+                                        document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:yellow;'></i>";
+                                        document.getElementById("favstar").setAttribute("id", "delstar");
+                                    }
+                                }                
+                            }
+                            if(h==0)
+                            {
+                               if(document.getElementById("favstar"))
+                               { document.getElementById("favstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                               }
+                                
+                                else if(document.getElementById("delstar"))
+                                {
+                                    document.getElementById("delstar").innerHTML="<i class='glyphicon glyphicon-star' style='font-size: 20px; color:white;'></i>";
+                                    document.getElementById("delstar").setAttribute("id", "favstar");
+                                }
+                            }
+                       
+                            
+                            console.log("Should enter news now");
+                $.ajax({
+                    beforeSend:function(){
+                        console.log("HEyyy");
+                        $("#news").text("Loading news...");
+                    },
+                    url: "something.php",
+                    data: ({new:sym}),
+                    type: 'GET',
+                    success: function(object){
+                    console.log("Hello");
+                    var jnews = $.parseJSON(object);
+                    console.log(jnews);
+                    var x=jnews.responseData.results;
+                    var str="";
+                    for( var i=0; i<x.length; i++)
+                        {
+                            var date = new Date(x[i].publishedDate);
+
+                            var months = Array("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December");
+                            var dd;
+                            if(date.getDate()<10)
+                            {
+                                dd="0"+date.getDate();
+                            }
+                            else
+                            {
+                                dd=date.getDate();
+                            }
+                            var string = dd + " " + months[date.getMonth()] + " " + date.getFullYear()+" ";
+                            var hh,mm,ss;
+                            if(date.getHours()<10)
+                            {
+                                hh="0"+date.getHours();
+                            }
+                            else
+                            {
+                                hh=date.getHours();
+                            }
+                            if(date.getMinutes()<10)
+                            {
+                                mm="0"+date.getMinutes();
+                            }
+                            else
+                            {
+                                mm=date.getMinutes();
+                            }
+                            if(date.getSeconds()<10)
+                            {
+                                ss="0"+date.getSeconds();
+                            }
+                            else
+                            {
+                                ss=date.getSeconds();
+                            }
+                            var time =hh+":"+mm+":"+ss;
+                            string+=time;
+                            str+="<div class='well' style='margin-top:25px'>";
+                            str+="<a href='"+x[i].unescapedUrl+"'>"+x[i].titleNoFormatting+"</a><p>"+x[i].content+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Publisher: </span>"+x[i].publisher+"</p><p style='font-weight:bold;'><span style='font-weight:bold;'>Date: </span>"+string+"</p></div>";
+                        }
+                    $('#news').html(str);
+                    },
+                    error: function(){
+                            alert("failure");
+                        }
+                });
+                            
+
+                        
+                            
+            
+        
+
+    //Make JSON request for timeseries data
+    $.ajax({
+        beforeSend:function(){
+            console.log("HBHBH");
+            $("#historical").text("Loading chart...");
+        },
+        url: "something.php",
+        data: {xyz : sym},
+        dataType: "json",
+        success: function(jsonl){
+           
+    console.log("GGGG");
+    var dates = jsonl.Dates || [];
+    var elements = jsonl.Elements || [];
+    var chartSeries = [];
+
+    if (elements[0]){
+
+        for (var i = 0, datLen = dates.length; i < datLen; i++) {
+            var dati = new Date(dates[i]);
+            var dat=Date.UTC(dati.getFullYear(), dati.getMonth(), dati.getDate());
+            var pointData = [
+                dat,
+                elements[0].DataSeries['open'].values[i],
+                elements[0].DataSeries['high'].values[i],
+                elements[0].DataSeries['low'].values[i],
+                elements[0].DataSeries['close'].values[i]
+            ];
+            chartSeries.push( pointData );
+        };
+    }
+    var ohlc=chartSeries;
+    // set the allowed units for data grouping
+    var groupingUnits = [[
+        'week',                         // unit name
+        [1]                             // allowed multiples
+    ], [
+        'month',
+        [1, 2, 3, 4, 6]
+    ]];
+
+    // create the chart
+    $('#historical').highcharts('StockChart', {
+        chart: {
+          width: $(".panel-body").width()  
+        },
+        exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+    
+            events: {
+            	load: function(event) {
+                event.target.reflow();
+              }
+            },
+        rangeSelector: {
+                buttons: [{
+				            type: 'week',
+                            count: 1,
+                            text: '1w'
+                          }, {
+                            type: 'month',
+                            count: 3,
+                            text: '3m'
+                          }, {
+                            type: 'month',
+                            count: 6,
+                            text: '6m'
+                          }, {
+                            type: 'ytd',
+                            text: 'YTD'
+                          }, {
+                            type: 'year',
+                            count: 1,
+                            text: '1y'
+                          }],
+            selected: 0
+        }, 
+        
+        title: {
+            text: sym + ' Stock Value'
+        },
+
+        yAxis: [{
+            title: {
+                text: 'Stock Value'
+            },
+            exporting: {
+        buttons: {
+            contextButton: {
+                enabled: false
+            }    
+        }
+    },
+            height: 200,
+            lineWidth: 2
+        }],
+        
+        series: [{
+            type: 'area',
+            name: sym,
+            data: ohlc,
+            dataGrouping: {
+                units: groupingUnits
+            },
+            tooltip : {
+            valuePrefix: "$ "
+            },
+            fillColor : {
+                    linearGradient : {
+                        x1: 0,
+                        y1: 0,
+                        x2: 0,
+                        y2: 1
+                    },
+                    stops : [
+                        [0, Highcharts.getOptions().colors[0]],
+                        [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                    ]
+                }
+            
+         
+        }],
+        credits: {
+            enabled:true
+        }
+    });
+        $(".highcharts-input-group").remove();
+        $("#historical").css("width","100%");
+        $(".highcharts-background").css("width","100%");
+        },
+        error: function(response,txtStatus){
+            console.log(response,txtStatus)
+        }
+    });
+
+            },
+            error: function(){
+                alert("failure");
+            }
+    });
+
+    
+        
+    }
+           
+  </script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    
+  </head>
+  <body>
+
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '816962931763316',
+      xfbml      : true,
+      version    : 'v2.7'
+    });
+  };
+
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+</script>
+
+<div class="container-fluid">
+<div class="col-md-12" style="width:70%;background-color:white;border-style: groove;padding:2%;border-radius:10px;border: 0px white;margin-left:10%;margin-right:auto;">
+<h4 style="text-align:center;font-weight:bold;">Stock Market Search</h4>
+<form class="form-inline">
+<div class="form-group col-md-12" style="width=100%">
+
+    <div class="col-md-3"><label>Enter the stock name or symbol:<span class="star" style="color: red;">*</span></label></div><div class="inner col-md-5"><input type="text" class="form-control" id="symbol" style="width:100%;" placeholder="APPL or Apple Inc" required></div>
+    <div class="col-md-4"><a class="submit btn btn-primary" href="#myCarousel" role="button" id="quote"><span class="glyphicon glyphicon-search" aria-hidden="true"></span>Get Quote</a>
+    <button class="btn btn-success" id="clear"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span>Clear</button>
+   <br><br>
+    <label>Powered by:</label> <a href="http://dev.markitondemand.com/MODApis/"><img src="http://cs-server.usc.edu:45678/hw/hw8/images/mod-logo.png" style="width:55%;height:20px"></a></div>
+    </div>
+ 
+</form> 
+     
+    </div>
+      </div>
+    
+      
+ <div class="container-fluid">
+<hr width=70% style="margin-left:10%;margin-right:auto;">
+      </div>
+<div class="container-fluid"> 
+<div class="col-md-12" style="width:70%;background-color:white;border-style: groove;padding:2%;border-radius:10px;border: 0px white;margin-left:10%;margin-right:auto;">
+<div id="myCarousel" class="carousel slide" data-interval="false">
+<div class="carousel-inner" role="listbox">
+    <div class="item active">
+        <div class="panel panel-default" style="margin-top:25px">
+            
+        <div class="col-md-8 text-left panel-heading" style="font-weight:bold; padding-b">Favorite List</div>
+            <div class="col-md-4 text-right panel-heading" style="padding-bottom:0px;padding-top:6px;">Automatic Refresh:
+            <input type="checkbox" id="autorefresh" data-toggle="toggle" data-size="small">&nbsp;&nbsp;
+            
+    <button style="font-size:10px;height:30px;" id="ref" class="btn btn-default active"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></button>
+            </div>
+            <div class="col-md-12 table-responsive">
+            <table class="table table stripped" style="width:95%; margin-top:10px;margin-bottom:20px" align="center" id="favtable">
+                <thead>
+                <tr style="font-weight:bold"> 
+                    <td class="col-md-1"> Symbol </td>
+                    <td class="col-md-3"> Company Name </td>
+                    <td class="col-md-2"> Stock Price </td>
+                    <td class="col-md-3"> Change (Change Percent) </td>
+                    <td class="col-md-2"> Market Cap </td>
+                    <td class="col-md-1">  </td>
+                    </tr>
+                    </thead>
+            </table>
+            </div>
+            </div>
+        </div>
+    
+    <div class="item">
+        <div class="panel panel-default" style="margin-top:20px;">
+        <div class="panel-heading" align="center" style="font-weight:bold;font-size:12px;"><a class="btn btn-default active text-left pull-left" href="#myCarousel" role="button" id="left" style="font-size:10px;height:27px;padding-bottom:1px;" align='left'><span class="glyphicon glyphicon-chevron-left" aria-hidden="true" align="left"></span></a>Stock Details</div>
+        <div class="panel-body">
+        <ul class="nav nav-pills">
+            <li class="active" ><a href="#current" data-toggle="tab"><span class="glyphicon glyphicon-dashboard" aria-hidden="true" style="margin-right:4px;"></span>Current Stock</a></li>
+            <li><a href="#historical" data-toggle="tab"><span class="glyphicon glyphicon-stats" aria-hidden="true" style="margin-right:4px;"></span>Historical Charts</a></li>
+            </ul>
+            
+<hr class="style-two;">
+<div class="tab-content" width=100%>
+    <div id="current" class="tab-pane fade in active">
+            <div class="col-md-10" style="font-weight:bold;">
+            Stock Details</div>  
+            <div class="col-md-2">
+                    <a href='javascript: share()' class="pad"><img   src='http://findicons.com/files/icons/2843/20_free_flat_shadow_style_original_colour_icons/64/social_media_icons_flat_shadow_set_64x64_0000_facebook.png' height="40px" width="40px" style=" border-radius: 5px;"/></a><button id="favstar" class="btn btn-default active" height="40px" width="40px" onclick='javascript: butt()'><i class="glyphicon glyphicon-star" style="font-size: 20px; color:white;"></i></button>
+            
+            </div>
+           <div class="col-md-6 table-responsive">
+        <table class="table table stripped" align="left">
+            <tr> <td class="col-md-3" style="font-weight:bold">Name</td><td id="1" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Symbol</td><td id="2" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Last Price</td><td id="3" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Change (Change Percent)</td><td id="4" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Time and Date</td><td id="5" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Market Cap</td><td id="6" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Volume</td><td id="7" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Change YTD (Change Percent YTD)</td><td id="8" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">High Price</td><td id="9" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Low Price</td><td id="10" class="col-md-3"></td></tr>
+            <tr> <td class="col-md-3" style="font-weight:bold">Opening Price</td><td id="11" class="col-md-3"></td></tr>
+            </table>
+            </div>
+        <br>
+        <div class="col-md-6" id="lol"></div>
+        
+            
+    </div>
+    <div id="historical" width=100% class="tab-pane fade"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</div>
+    </div>
+
+    
+    
+
+    </body>
+      
+</html>
